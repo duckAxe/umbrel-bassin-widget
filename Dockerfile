@@ -1,11 +1,17 @@
 # Use official bun image for the builder
-FROM --platform=$BUILDPLATFORM oven/bun:1 as builder
+FROM --platform=$BUILDPLATFORM oven/bun:1.2.2 AS builder
 
 # Set up arguments for targeting builds
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 
 WORKDIR /app
+
+# Copy package files first for better caching
+COPY package.json bun.lock tsconfig.json ./
+RUN bun install --frozen-lockfile
+
+# Copy the rest of the source code
 COPY . .
 
 # Compile as a binary for the target architecture 
@@ -14,14 +20,15 @@ RUN case "$TARGETPLATFORM" in \
     "linux/arm64") TARGET="bun-linux-arm64" ;; \
     *) echo "Unsupported platform: $TARGETPLATFORM" && exit 1 ;; \
     esac && \
-    bun build --compile --minify --sourcemap ./index.ts --target $TARGET --outfile widget-server
+    bun build --compile --minify --sourcemap ./index.ts --target $TARGET --outfile server
 
-# Use a distroless glibc image for minimal Docker image size
-FROM cgr.dev/chainguard/glibc-dynamic:latest@sha256:a9cea20608270d361c98cd3304b90baa56a33ff3489a36220c75b18caf22bbe7
+# Use a minimal distroless image for the final stage
+# Pinned to digest from 13 Feb 2025
+FROM cgr.dev/chainguard/glibc-dynamic@sha256:c907cf5576de12bb54ac2580a91d0287de55f56bce4ddd66a0edf5ebaba9feed
 
-# Copy the compiled binary from the builder
-COPY --from=builder /app/widget-server /widget-server
+# Copy the compiled binary
+COPY --from=builder /app/server /server
 
-# Run the binary
+# Run the binary directly
 EXPOSE 3000
-CMD ["/widget-server"]
+CMD ["/server"]

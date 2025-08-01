@@ -1,6 +1,6 @@
 import { serve } from "bun";
 
-const REFRESH = "60s";
+const REFRESH = "5s";
 
 type Pool = {
   hashrate5m: string;
@@ -58,9 +58,9 @@ serve({
       const [pool, hashrate, shares] = lines.map((line) => JSON.parse(line));
 
       const hashrate5m = hashrateSuffix(hashrate.hashrate5m);
-      const accepted = abbreviateNumber(shares.accepted);
-      const bestshare = abbreviateNumber(shares.bestshare);
       const workers = pool.Workers.toString();
+      const bestshare = abbreviateNumber(shares.bestshare);
+      const accepted = abbreviateNumber(shares.accepted);
 
       return Response.json({
         type: "four-stats",
