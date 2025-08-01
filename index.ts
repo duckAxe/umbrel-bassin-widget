@@ -29,8 +29,8 @@ const errorResponse = () =>
     type: "four-stats",
     refresh: REFRESH,
     items: [
-      { title: "Hashrate 5m", text: "-" },
-      { title: "Hashrate 1h", text: "-" },
+      { title: "Hashrate", text: "-" },
+      { title: "Workers", text: "-" },
       { title: "Best Share", text: "-" },
       { title: "Total Shares", text: "-" },
     ],
@@ -55,21 +55,21 @@ serve({
       const lines = (await response.text()).trim().split("\n").filter(Boolean);
       if (lines.length < 3) throw new Error("Malformed pool response");
 
-      const pool: Pool = JSON.parse(lines[0]);
+      const [pool, hashrate, shares] = lines.map((line) => JSON.parse(line));
 
-      const hashrate5m = hashrateSuffix(pool.hashrate5m);
-      const hashrate1h = hashrateSuffix(pool.hashrate1h);
-      const shares = abbreviateNumber(pool.shares);
-      const bestshare = abbreviateNumber(pool.bestshare);
+      const hashrate5m = hashrateSuffix(hashrate.hashrate5m);
+      const accepted = abbreviateNumber(shares.accepted);
+      const bestshare = abbreviateNumber(shares.bestshare);
+      const workers = pool.Workers.toString();
 
       return Response.json({
         type: "four-stats",
         refresh: REFRESH,
         items: [
-          { title: "Hashrate 5m", text: hashrate5m.value, subtext: hashrate5m.unit },
-          { title: "Hashrate 1h", text: hashrate1h.value, subtext: hashrate1h.unit },
+          { title: "Hashrate", text: hashrate5m.value, subtext: hashrate5m.unit },
+          { title: "Workers", text: workers },
           { title: "Best Share", text: bestshare.value, subtext: bestshare.unit },
-          { title: "Total Shares", text: shares.value, subtext: shares.unit },
+          { title: "Total Shares", text: accepted.value, subtext: accepted.unit },
         ],
       });
     } catch (error) {
