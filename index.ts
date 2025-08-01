@@ -28,6 +28,7 @@ const errorResponse = () =>
   Response.json({
     type: "four-stats",
     refresh: REFRESH,
+    link: "",
     items: [
       { title: "Hashrate", text: "-" },
       { title: "Workers", text: "-" },
@@ -65,6 +66,7 @@ serve({
       return Response.json({
         type: "four-stats",
         refresh: REFRESH,
+        link: "",
         items: [
           { title: "Hashrate", text: hashrate5m.value, subtext: hashrate5m.unit },
           { title: "Workers", text: workers },
