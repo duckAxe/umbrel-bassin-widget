@@ -1,0 +1,80 @@
+import { serve } from "bun";
+
+const REFRESH = "60s";
+
+type Pool = {
+  hashrate5m: string;
+  hashrate1h: string;
+  shares: number;
+  bestshare: number;
+};
+
+const hashrateSuffix = (value: string): { value: string; unit: string } => {
+  const match = value.match(/^([\d.]+)([KMGTPEZY])$/);
+  if (!match) return { value, unit: "" };
+  const [, num, unit] = match;
+  return { value: num.toString(), unit: `${unit}h/s` };
+};
+
+const abbreviateNumber = (value: number): { value: string; unit: string } => {
+  if (value >= 1e12) return { value: (value / 1e12).toFixed(2), unit: "T" };
+  if (value >= 1e9) return { value: (value / 1e9).toFixed(2), unit: "G" };
+  if (value >= 1e6) return { value: (value / 1e6).toFixed(2), unit: "M" };
+  if (value >= 1e3) return { value: (value / 1e3).toFixed(2), unit: "K" };
+  return { value: value.toFixed(2), unit: "" };
+};
+
+const errorResponse = () =>
+  Response.json({
+    type: "four-stats",
+    refresh: REFRESH,
+    items: [
+      { title: "Hashrate 5m", text: "-" },
+      { title: "Hashrate 1h", text: "-" },
+      { title: "Best Share", text: "-" },
+      { title: "Total Shares", text: "-" },
+    ],
+  });
+
+serve({
+  port: 3000,
+  async fetch(req) {
+    const url = new URL(req.url);
+    const apiUrl = process.env.BASSIN_API_POOL_URL;
+
+    if (url.pathname !== "/widgets/pool") {
+      return new Response("Path not found", { status: 404 });
+    }
+    if (!apiUrl) {
+      return new Response("No API url provided", { status: 403 });
+    }
+
+    try {
+      const response = await fetch(`${apiUrl}?${Date.now()}`);
+      if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+      const lines = (await response.text()).trim().split("\n").filter(Boolean);
+      if (lines.length < 3) throw new Error("Malformed pool response");
+
+      const pool: Pool = JSON.parse(lines[0]);
+
+      const hashrate5m = hashrateSuffix(pool.hashrate5m);
+      const hashrate1h = hashrateSuffix(pool.hashrate1h);
+      const shares = abbreviateNumber(pool.shares);
+      const bestshare = abbreviateNumber(pool.bestshare);
+
+      return Response.json({
+        type: "four-stats",
+        refresh: REFRESH,
+        items: [
+          { title: "Hashrate 5m", text: hashrate5m.value, subtext: hashrate5m.unit },
+          { title: "Hashrate 1h", text: hashrate1h.value, subtext: hashrate1h.unit },
+          { title: "Best Share", text: bestshare.value, subtext: bestshare.unit },
+          { title: "Total Shares", text: shares.value, subtext: shares.unit },
+        ],
+      });
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      return errorResponse();
+    }
+  },
+});

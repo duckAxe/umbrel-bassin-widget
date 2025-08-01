@@ -1,0 +1,13 @@
+{
+  "name": "umbrel-bassin-widget",
+  "version": "1.0.0",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^24.1.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
